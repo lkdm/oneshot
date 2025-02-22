@@ -26,14 +26,21 @@ IMAGE="alpine:latest"
 INSTALL_COMMANDS=""
 COMMAND=""
 OUTPUT_DIR="$(pwd)"
+
 parse_args() {
+	if [[ "$1" == "run" ]]; then
+        shift
+        RUN_COMMAND="$1"
+        shift
+    fi
+
     while [[ "$#" -gt 0 ]]; do
         case $1 in
             -i|--image)
                 IMAGE="$2"
                 shift 2
                 ;;
-			-i|--output-dir)
+            -o|--output-dir)
                 OUTPUT_DIR="$2"
                 shift 2
                 ;;
@@ -44,13 +51,13 @@ parse_args() {
                 if [ -n "$2" ] && [[ "$2" != --* ]]; then
                     INSTALL_COMMANDS+="apk add --no-cache $2 && "
                     shift
+                else
+                    INSTALL_COMMANDS+="apk add --no-cache && "
                 fi
                 shift
                 ;;
             --from-git)
-                if [[ ! $INSTALL_COMMANDS =~ "apk add --no-cache git" ]]; then
-                    INSTALL_COMMANDS+="apk add --no-cache git && "
-                fi
+                INSTALL_COMMANDS+="apk add --no-cache git && "
                 if [ -n "$2" ] && [[ "$2" != --* ]]; then
                     INSTALL_COMMANDS+="git clone $2 && "
                     shift
@@ -58,9 +65,7 @@ parse_args() {
                 shift
                 ;;
             --from-cargo)
-                if [[ ! $INSTALL_COMMANDS =~ "apk add --no-cache cargo" ]]; then
-                    INSTALL_COMMANDS+="apk add --no-cache cargo && "
-                fi
+                INSTALL_COMMANDS+="apk add --no-cache cargo && "
                 if [ -n "$2" ] && [[ "$2" != --* ]]; then
                     INSTALL_COMMANDS+="cargo install $2 && "
                     shift
@@ -68,9 +73,7 @@ parse_args() {
                 shift
                 ;;
             --from-uv)
-                if [[ ! $INSTALL_COMMANDS =~ "pip3 install uv" ]]; then
-                    INSTALL_COMMANDS+="apk add --no-cache python3 py3-pip && pip3 install uv && "
-                fi
+                INSTALL_COMMANDS+="apk add --no-cache python3 py3-pip && pip3 install uv && "
                 if [ -n "$2" ] && [[ "$2" != --* ]]; then
                     INSTALL_COMMANDS+="uv install $2 && "
                     shift
@@ -84,7 +87,6 @@ parse_args() {
         esac
     done
 }
-parse_args "$@"
 
 OUTPUT_DIR="$(realpath "$OUTPUT_DIR")"
 
@@ -93,18 +95,24 @@ init() {
     podman machine start 2>&1 | grep -v "already running" || true
 }
 
-case "${COMMAND%% *}" in
+COMMAND_TYPE="${1}"
+shift
+
+parse_args "$COMMAND_TYPE" "$@"
+
+case "$COMMAND_TYPE" in
     run)
-    	RUN_COMMAND="${COMMAND#run }"
         podman run -i --rm \
             -v "$OUTPUT_DIR:/OUTPUT:Z" \
             -w "/OUTPUT" \
-            "$IMAGE" /bin/sh -c "${INSTALL_COMMANDS}${RUN_COMMAND}"
+            -a stdout \
+            -a stderr \
+            "$IMAGE" /bin/sh -c "${INSTALL_COMMANDS}eval $RUN_COMMAND"
         echo "Output directory: $OUTPUT_DIR"
         ;;
     shell)
         podman run -it --rm \
-            -v "$OUTPUT_DIR:/OUTPUT" \
+            -v "$OUTPUT_DIR:/OUTPUT:Z" \
             -w "/OUTPUT" \
             -e "PS1=\[\033[1;32m\]1shot\[\033[0m\]:\[\033[1;34m\]\w\[\033[0m\]^ " \
             "$IMAGE" /bin/sh -c "${INSTALL_COMMANDS}exec /bin/sh"
@@ -114,7 +122,7 @@ case "${COMMAND%% *}" in
         show_help
         ;;
     *)
-        echo "Unknown command: ${COMMAND%% *}"
+        echo "Unknown command: $COMMAND_TYPE"
         show_help
         exit 1
         ;;
