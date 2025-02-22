@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand, ValueEnum};
+use oneshot::container::Capabilities;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -23,7 +24,7 @@ struct Cli {
 		help = "Elevate container privileges",
 		long_help = "Add specific privileges to the container. This can increase the container's capabilities within the host system."
 	)]
-    cap_add: Option<Vec<Privileges>>,
+    cap_add: Option<Vec<Capabilities>>,
 
     #[arg(long, num_args = 1..,
     	help = "Use APK packages",
@@ -48,12 +49,6 @@ struct Cli {
 		long_help = "Install packages using UV. If no arguments are provided, it will just install UV."
     )]
     from_uv: Option<Vec<String>>,
-}
-
-#[derive(Clone, Debug, ValueEnum)]
-enum Privileges {
-    NetRaw,
-    NetAdmin,
 }
 
 #[derive(Subcommand)]
