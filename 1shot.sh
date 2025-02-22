@@ -13,6 +13,9 @@ Commands:
 Options:
   -i, --image <image>  Specify a target image, default=alpine:latest
   -o, --output-dir <path>    Specify the output directory (default: current directory)
+  -c, --cap-add [privs]       List of priviliges to add
+
+Install packages:
   --from-apk   [pkgs]  Install packages from apk
   --from-git   [repos] Download repositories from git
   --from-cargo [pkgs]  Install packages from cargo
@@ -30,7 +33,7 @@ Examples:
 	1shot run 'convert input.png output.jpg' --from-apk imagemagick
 
   Perform a quick network scan:
-	1shot run 'nmap -p 80,443 example.com' --from-apk nmap
+    1shot run "mtr -n -r -c 10 google.com" --from-apk mtr -c NET_RAW NET_ADMIN
 
   Pretty print JSON:
   	echo '{\"foo\":\"bar\", \"baz\":[1,2,3]}' | 1shot run 'jq .' --from-apk jq
@@ -44,9 +47,10 @@ IMAGE="alpine:latest"
 INSTALL_COMMANDS=""
 COMMAND=""
 OUTPUT_DIR="$(pwd)"
+CAP_ADD=""
 
 parse_args() {
-	if [[ "$1" == "run" ]]; then
+    if [[ "$1" == "run" ]]; then
         shift
         RUN_COMMAND="$1"
         shift
@@ -54,7 +58,13 @@ parse_args() {
 
     while [[ "$#" -gt 0 ]]; do
         case $1 in
-            -i|--image)
+ 			-c|--cap-add)
+                shift
+                while [ -n "$1" ] && [[ "$1" != -* ]]; do
+                    CAP_ADD+="--cap-add=$1 "
+                    shift
+                done
+                ;;            -i|--image)
                 IMAGE="$2"
                 shift 2
                 ;;
@@ -66,48 +76,59 @@ parse_args() {
                 if [[ ! $INSTALL_COMMANDS =~ "apk update" ]]; then
                     INSTALL_COMMANDS+="apk update && "
                 fi
-                if [ -n "$2" ] && [[ "$2" != --* ]]; then
-                    INSTALL_COMMANDS+="apk add --no-cache $2 && "
+                APK_PACKAGES=""
+                while [ -n "$2" ] && [[ "$2" != -* ]]; do
+                    APK_PACKAGES+="$2 "
                     shift
-                else
-                    INSTALL_COMMANDS+="apk add --no-cache && "
+                done
+                if [ -n "$APK_PACKAGES" ]; then
+                    INSTALL_COMMANDS+="apk add --no-cache $APK_PACKAGES && "
                 fi
                 shift
                 ;;
             --from-git)
                 INSTALL_COMMANDS+="apk add --no-cache git && "
-                if [ -n "$2" ] && [[ "$2" != --* ]]; then
-                    INSTALL_COMMANDS+="git clone $2 && "
+                GIT_REPOS=""
+                while [ -n "$2" ] && [[ "$2" != -* ]]; do
+                    GIT_REPOS+="$2 "
                     shift
+                done
+                if [ -n "$GIT_REPOS" ]; then
+                    for repo in $GIT_REPOS; do
+                        INSTALL_COMMANDS+="git clone $repo && "
+                    done
                 fi
                 shift
                 ;;
             --from-cargo)
                 INSTALL_COMMANDS+="apk add --no-cache cargo && "
-                if [ -n "$2" ] && [[ "$2" != --* ]]; then
-                    INSTALL_COMMANDS+="cargo install $2 && "
+                CARGO_PACKAGES=""
+                while [ -n "$2" ] && [[ "$2" != -* ]]; do
+                    CARGO_PACKAGES+="$2 "
                     shift
+                done
+                if [ -n "$CARGO_PACKAGES" ]; then
+                    INSTALL_COMMANDS+="cargo install $CARGO_PACKAGES && "
                 fi
                 shift
                 ;;
-
-			--from-uv)
-    			INSTALL_COMMANDS+="apk add --no-cache python3 py3-pip && \
-    			python3 -m venv /app/venv && \
-    			. /app/venv/bin/activate && \
-    			pip install uv && \
-    			"
-    			UV_PACKAGES=""
-    			while [ -n "$2" ] && [[ "$2" != -* ]]; do
-        			UV_PACKAGES+="$2 "
-        			shift
-    			done
-    			if [ -n "$UV_PACKAGES" ]; then
-        			INSTALL_COMMANDS+="uv pip install $UV_PACKAGES && "
-    			fi
-    			INSTALL_COMMANDS+="deactivate && . /app/venv/bin/activate &&"
-    			shift
-    			;;
+            --from-uv)
+                INSTALL_COMMANDS+="apk add --no-cache python3 py3-pip && \
+                python3 -m venv /app/venv && \
+                . /app/venv/bin/activate && \
+                pip install uv && \
+                "
+                UV_PACKAGES=""
+                while [ -n "$2" ] && [[ "$2" != -* ]]; do
+                    UV_PACKAGES+="$2 "
+                    shift
+                done
+                if [ -n "$UV_PACKAGES" ]; then
+                    INSTALL_COMMANDS+="uv pip install $UV_PACKAGES && "
+                fi
+                INSTALL_COMMANDS+="deactivate && . /app/venv/bin/activate &&"
+                shift
+                ;;
             *)
                 COMMAND="$@"
                 break
@@ -115,6 +136,7 @@ parse_args() {
         esac
     done
 }
+
 
 OUTPUT_DIR="$(realpath "$OUTPUT_DIR")"
 
@@ -135,6 +157,7 @@ case "$COMMAND_TYPE" in
             -w "/OUTPUT" \
             -a stdout \
             -a stderr \
+            $CAP_ADD \
             "$IMAGE" /bin/sh -c "${INSTALL_COMMANDS}eval $RUN_COMMAND"
         echo "Output directory: $OUTPUT_DIR"
         ;;
@@ -142,6 +165,7 @@ case "$COMMAND_TYPE" in
         podman run -it --rm \
             -v "$OUTPUT_DIR:/OUTPUT:Z" \
             -w "/OUTPUT" \
+            $CAP_ADD \
             -e "PS1=\[\033[1;32m\]1shot\[\033[0m\]:\[\033[1;34m\]\w\[\033[0m\]^ " \
             "$IMAGE" /bin/sh -c "${INSTALL_COMMANDS}exec /bin/sh"
         echo "Output directory: $OUTPUT_DIR"
