@@ -1,10 +1,8 @@
-
 #!/bin/bash
 set -e  # Exit on any error
 trap 'echo "An error occurred. Exiting..."; exit 1' ERR
 
 IMAGE="alpine:latest"  # Set default image
-
 
 show_help() {
     echo "Usage: 1shot <command> [options]
@@ -15,35 +13,38 @@ Commands:
   help                 Show this help message
 
 Options:
-  -i                   Specify a target image, default=alpine:latest
+  -i, --image <image>  Specify a target image, default=alpine:latest
 
 Podman must be installed.
-  "
+"
 }
 
 init() {
-	if [[ "$1" == "-i" || "$1" == "--image" ]]; then
-    	if [[ -n "$2" ]]; then
-        	IMAGE="$2"
-        	shift 2
-    	else
-        	echo "No image specified after -i/--image flag. Using default: alpine:latest"
-        	shift 1
-    	fi
-	fi
+    while [[ "$#" -gt 0 ]]; do
+        case $1 in
+            -i|--image)
+                if [[ -n "$2" ]]; then
+                    IMAGE="$2"
+                    shift 2
+                else
+                    echo "Error: No image specified after -i/--image flag. Using default: alpine:latest"
+                    shift
+                fi
+                ;;
+            *)
+                break
+                ;;
+        esac
+    done
 
-	if [[ "$1" == "-i" || "$1" == "--image" ]]; then
-    	IMAGE="$2"
-    	shift 2
-	fi
-
-	podman machine init 2>&1 | grep -v "VM already exists" || true
-	podman machine start 2>&1 | grep -v "already running" || true
+    podman machine init 2>&1 | grep -v "VM already exists" || true
+    podman machine start 2>&1 | grep -v "already running" || true
 }
 
 case "$1" in
     shell)
-    	init
+        shift
+        init "$@"
         podman run -it --rm \
             -v "$HOME:$HOME" \
             -w "$HOME" \
@@ -51,19 +52,28 @@ case "$1" in
             "$IMAGE" /bin/sh
         ;;
     run)
-        if [ -z "$2" ]; then
-            echo "Error: No script provided with -s option"
+        shift
+        if [ $# -eq 0 ]; then
+            echo "Error: No command provided with 'run'"
             show_help
             exit 1
         fi
-        init
+        init "$@"
         podman run -i --rm \
             -v "$HOME:$HOME" \
             -w "$HOME" \
-            "$IMAGE" /bin/sh -c "$2"
+            "$IMAGE" /bin/sh -c "$*"
         ;;
-    help|"")
+    help)
         show_help
+        ;;
+    "")
+        show_help
+        ;;
+    *)
+        echo "Error: Unknown command '$1'"
+        show_help
+        exit 1
         ;;
 esac
 
