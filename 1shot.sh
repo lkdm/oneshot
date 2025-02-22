@@ -7,6 +7,7 @@ show_help() {
 
 Commands:
   run <command>        Run a single command in a container
+  exec <file>          Execute a file
   shell                Start an interactive shell in a container
   help                 Show this help message
 
@@ -23,8 +24,14 @@ Install packages:
 
 Examples:
 
+  Hello world example:
+	1shot run \"uvx pycowsay 'Hello from 1shot!'\" --from-uv pycowsay
+
   Run an interactive shell:
   	1shot shell
+
+  Run a Python3 interactive shell:
+    1shot run \"python3 -i\" --from-apk python3 --from-uv numpy pandas
 
   Download a YouTube video:
     1shot run 'yt-dlp dQw4w9WgXcQ' --from-uv yt-dlp
@@ -33,10 +40,28 @@ Examples:
 	1shot run 'convert input.png output.jpg' --from-apk imagemagick
 
   Perform a quick network scan:
-    1shot run "mtr -n -r -c 10 google.com" --from-apk mtr -c NET_RAW NET_ADMIN
+    1shot run \"mtr -n -r -c 10 google.com\" --from-apk mtr -c NET_RAW NET_ADMIN
 
   Pretty print JSON:
   	echo '{\"foo\":\"bar\", \"baz\":[1,2,3]}' | 1shot run 'jq .' --from-apk jq
+
+  Analyse JSON structure:
+	1shot run \"jq -r 'paths | join(\".\")' input.json | sort -u\" --from-apk jq
+
+  Video encoding:
+	1shot run \"ffmpeg -i input.mp4 output.webm\" --from-apk ffmpeg
+
+  DNS lookup:
+	1shot run \"dig +short example.com A\" --from-apk bind-tools
+
+  Convert markdown to PDF:
+	1shot run \"pandoc -s input.md -o output.pdf\" --from-apk pandoc
+
+  Scan for open ports:
+	1shot run \"nmap -sT example.com\" --from-apk nmap --cap-add=NET_RAW --cap-add=NET_ADMIN
+
+  Generate a QR Code:
+	1shot run \"qrencode -o output.png 'https://example.com'\" --from-apk qrencode
 
 
 Podman must be installed.
