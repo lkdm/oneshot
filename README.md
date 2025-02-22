@@ -11,5 +11,5 @@ scripts or programs without installing dependencies to the host.
 This script installs `yt-dlp` using `uv` and runs it.
 
 ```sh
-1shot run "yt-dlp dQw4w9WgXcQ" --from-uv yt-dlp
+podshot run "yt-dlp dQw4w9WgXcQ" --from-uv yt-dlp
 ```
