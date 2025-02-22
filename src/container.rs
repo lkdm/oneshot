@@ -1,3 +1,4 @@
+use std::fmt;
 use std::path::PathBuf;
 
 use clap::ValueEnum;
@@ -23,6 +24,12 @@ pub struct ContainerRunRequest {
 }
 
 pub struct InstallCommand(String);
+
+impl fmt::Display for InstallCommand {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 pub struct InstallCommandBuilder(Vec<String>);
 
