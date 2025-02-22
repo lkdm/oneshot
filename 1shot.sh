@@ -195,6 +195,9 @@ case "$COMMAND_TYPE" in
             "$IMAGE" /bin/sh -c "${INSTALL_COMMANDS}exec /bin/sh"
         echo "Output directory: $OUTPUT_DIR"
         ;;
+    exec)
+    	echo "Feature not implemented yet."
+    	;;
     help|"")
         show_help
         ;;
