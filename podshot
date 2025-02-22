@@ -154,6 +154,24 @@ parse_args() {
                 INSTALL_COMMANDS+="deactivate && . /app/venv/bin/activate &&"
                 shift
                 ;;
+            --from-bun)
+                # TODO: Installing this is painfully slow, you should just use the Podman image
+                # oven/bun:alpine
+                INSTALL_COMMANDS+="apk add --no-cache curl bash && \
+                curl -fsSL https://bun.sh/install | bash && \
+                export PATH=/root/.bun/bin:$PATH && "
+
+                BUN_PACKAGES=""
+                while [ -n "$2" ] && [[ "$2" != -* ]]; do
+                    BUN_PACKAGES+="$2 "
+                    shift
+                done
+
+                if [ -n "$BUN_PACKAGES" ]; then
+                    INSTALL_COMMANDS+="bun install $BUN_PACKAGES && "
+                fi
+                shift
+                ;;
             *)
                 COMMAND="$@"
                 break
