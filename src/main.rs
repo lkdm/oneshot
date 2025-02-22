@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use clap::{Parser, Subcommand, ValueEnum};
 
 #[derive(Parser)]
-#[command(version, about, long_about = None)]
+#[command(author, version, about, long_about = None)]
 struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,
@@ -58,26 +58,24 @@ enum Privileges {
 
 #[derive(Subcommand)]
 enum Commands {
+    #[command(about = "Run a shell command within the oneshot container")]
     Run {
-        #[arg(short, long)]
+        #[arg(
+            short,
+            long,
+            help = "Shell command to run",
+            long_help = "The string will be evaluated as a Bash script within the container."
+        )]
         script: String,
     },
+    #[command(about = "Run an interactive shell within the oneshot container")]
     Shell,
+    #[command(about = "Execute a given script within the oneshot container")]
     Exec {
         #[arg(short, long)]
         path: std::path::PathBuf,
     },
 }
-
-//   -i, --image <image>  Specify a target image, default=alpine:latest
-//   -o, --output-dir <path>    Specify the output directory (default: current directory)
-//   -c, --cap-add [privs]       List of priviliges to add
-//
-// Install packages:
-//   --from-apk   [pkgs]  Install packages from apk
-//   --from-git   [repos] Download repositories from git
-//   --from-cargo [pkgs]  Install packages from cargo
-//   --from-uv    [pkgs]  Install packages from uv
 
 fn main() {
     let cli = Cli::parse();
