@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e  # Exit on any error
-trap 'echo "Ctrl+C pressed. Exiting..."; exit 1' SIGINT
 trap 'echo "An error occurred. Exiting..."; exit 1' ERR
 
 show_help() {
@@ -153,7 +152,7 @@ parse_args "$COMMAND_TYPE" "$@"
 
 case "$COMMAND_TYPE" in
     run)
-        podman run -i --rm \
+        podman run --sig-proxy=true -i --rm \
             -v "$OUTPUT_DIR:/OUTPUT:Z" \
             -w "/OUTPUT" \
             -a stdout \
