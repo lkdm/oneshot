@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e  # Exit on any error
+trap 'echo "Ctrl+C pressed. Exiting..."; exit 1' SIGINT
 trap 'echo "An error occurred. Exiting..."; exit 1' ERR
 
 show_help() {
