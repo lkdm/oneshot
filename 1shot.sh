@@ -72,14 +72,20 @@ parse_args() {
                 fi
                 shift
                 ;;
-            --from-uv)
-                INSTALL_COMMANDS+="apk add --no-cache python3 py3-pip && pip3 install uv && "
-                if [ -n "$2" ] && [[ "$2" != --* ]]; then
-                    INSTALL_COMMANDS+="uv install $2 && "
-                    shift
-                fi
-                shift
-                ;;
+
+			--from-uv)
+    			INSTALL_COMMANDS+="apk add --no-cache python3 py3-pip && \
+    			python3 -m venv /app/venv && \
+    			. /app/venv/bin/activate && \
+    			pip install uv && \
+    			"
+    			if [ -n "$2" ] && [[ "$2" != --* ]]; then
+        			INSTALL_COMMANDS+="uv pip install $2 && "
+        			shift
+    			fi
+    			INSTALL_COMMANDS+="deactivate && . /app/venv/bin/activate &&"
+    			shift
+    			;;
             *)
                 COMMAND="$@"
                 break
