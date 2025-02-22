@@ -18,6 +18,24 @@ Options:
   --from-cargo [pkgs]  Install packages from cargo
   --from-uv    [pkgs]  Install packages from uv
 
+Examples:
+
+  Run an interactive shell:
+  	1shot shell
+
+  Download a YouTube video:
+    1shot run 'yt-dlp dQw4w9WgXcQ' --from-uv yt-dlp
+
+  Convert an image format:
+	1shot run 'convert input.png output.jpg' --from-apk imagemagick
+
+  Perform a quick network scan:
+	1shot run 'nmap -p 80,443 example.com' --from-apk nmap
+
+  Pretty print JSON:
+  	echo '{\"foo\":\"bar\", \"baz\":[1,2,3]}' | 1shot run 'jq .' --from-apk jq
+
+
 Podman must be installed.
 "
 }
@@ -79,9 +97,13 @@ parse_args() {
     			. /app/venv/bin/activate && \
     			pip install uv && \
     			"
-    			if [ -n "$2" ] && [[ "$2" != --* ]]; then
-        			INSTALL_COMMANDS+="uv pip install $2 && "
+    			UV_PACKAGES=""
+    			while [ -n "$2" ] && [[ "$2" != -* ]]; do
+        			UV_PACKAGES+="$2 "
         			shift
+    			done
+    			if [ -n "$UV_PACKAGES" ]; then
+        			INSTALL_COMMANDS+="uv pip install $UV_PACKAGES && "
     			fi
     			INSTALL_COMMANDS+="deactivate && . /app/venv/bin/activate &&"
     			shift
