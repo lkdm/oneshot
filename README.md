@@ -1,14 +1,14 @@
-# Podshot
+# Oneshot
 
-Podshot executes arbitrary scripts or starts a shell in a minimal temporary Podman container. This allows arbitrary execution of
-scripts or programs without installing dependencies to the host.
-
+Oneshot executes arbitrary scripts or starts a shell in a minimal temporary Podman container.
 
 ## Usage
 
-### Shell command
+### Interactive shell
 
-
+```sh
+oneshot shell
+```
 
 ### Run command
 
@@ -17,7 +17,7 @@ scripts or programs without installing dependencies to the host.
 This script installs `yt-dlp` using `uv` and runs it.
 
 ```sh
-podshot run "yt-dlp dQw4w9WgXcQ" --from-uv yt-dlp
+oneshot run -s "yt-dlp dQw4w9WgXcQ" --from-uv yt-dlp
 ```
 
 ### Exec command
