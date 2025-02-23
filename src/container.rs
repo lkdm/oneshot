@@ -1,5 +1,6 @@
-use std::fmt;
+pub mod podman;
 use std::path::PathBuf;
+use std::{env, fmt};
 
 use clap::ValueEnum;
 use thiserror::Error;
@@ -7,13 +8,24 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum ContainerError {
     #[error("could not init container")]
-    Init,
+    Init(String),
+    #[error("error while executing")]
+    Execution(String),
 }
 
 #[derive(Clone, Debug, ValueEnum)]
 pub enum Capabilities {
     NetRaw,
     NetAdmin,
+}
+
+impl fmt::Display for Capabilities {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Capabilities::NetRaw => write!(f, "NET_RAW"),
+            Capabilities::NetAdmin => write!(f, "NET_ADMIN"),
+        }
+    }
 }
 
 pub struct ContainerRunRequest {
@@ -23,6 +35,25 @@ pub struct ContainerRunRequest {
     install_commands: InstallCommand,
 }
 
+impl ContainerRunRequest {
+    pub fn new(
+        image: String,
+        output_dir: Option<PathBuf>,
+        capabilities: Option<Vec<Capabilities>>,
+        install_commands: &InstallCommand,
+    ) -> Self {
+        let output_dir = &output_dir
+            .unwrap_or_else(|| env::current_dir().expect("Failed to get current directory"));
+        Self {
+            image: image.to_string(),
+            output_dir: output_dir.into(),
+            capabilities: capabilities.unwrap_or_default(),
+            install_commands: install_commands.clone(),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct InstallCommand(String);
 
 impl fmt::Display for InstallCommand {
@@ -31,6 +62,7 @@ impl fmt::Display for InstallCommand {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct InstallCommandBuilder(Vec<String>);
 
 impl InstallCommandBuilder {
@@ -38,23 +70,34 @@ impl InstallCommandBuilder {
         Self(Vec::new())
     }
 
-    pub fn with_apk(&mut self, packages: &[String]) {
+    pub fn with_apk(&mut self, packages: Option<&[String]>) -> &mut Self {
+        let Some(packages) = packages else {
+            return self;
+        };
         self.0.push("apk update".into());
         if !packages.is_empty() {
             let cmd = format!("apk add --no-cache {}", packages.join(" "));
             self.0.push(cmd);
         }
+        self
     }
 
-    pub fn with_cargo(&mut self, packages: &[String]) {
+    pub fn with_cargo(&mut self, packages: Option<&[String]>) -> &mut Self {
+        let Some(packages) = packages else {
+            return self;
+        };
         self.0.push("apk add --no-cache cargo".into());
         if !packages.is_empty() {
             let cmd = format!("cargo install {}", packages.join(" "));
             self.0.push(cmd);
         }
+        self
     }
 
-    pub fn with_uv(&mut self, packages: &[String]) {
+    pub fn with_uv(&mut self, packages: Option<&[String]>) -> &mut Self {
+        let Some(packages) = packages else {
+            return self;
+        };
         self.0.extend([
             "apk add --no-cache python3 py3-pip".into(),
             "python3 -m venv /app/venv".into(),
@@ -65,9 +108,13 @@ impl InstallCommandBuilder {
             let cmd = format!("uv pip install {}", packages.join(" "));
             self.0.push(cmd);
         }
+        self
     }
 
-    pub fn with_bun(&mut self, packages: &[String]) {
+    pub fn with_bun(&mut self, packages: Option<&[String]>) -> &mut Self {
+        let Some(packages) = packages else {
+            return self;
+        };
         self.0.extend([
             "apk add --no-cache curl bash".into(),
             "curl -fsSL https://bun.sh/install | bash".into(),
@@ -77,50 +124,71 @@ impl InstallCommandBuilder {
             let cmd = format!("bun install {}", packages.join(" "));
             self.0.push(cmd);
         }
+        self
     }
 
-    pub fn with_git(&mut self, repos: &[String]) {
+    pub fn with_git(&mut self, repos: Option<&[String]>) -> &mut Self {
+        let Some(repos) = repos else {
+            return self;
+        };
         self.0.push("apk add --no-cache git".into());
         for repo in repos {
             let cmd = format!("git clone {}", repo);
             self.0.push(cmd);
         }
+        self
     }
 
-    pub fn with_rubygems(&mut self, packages: &[String]) {
+    pub fn with_rubygems(&mut self, packages: Option<&[String]>) -> &mut Self {
+        let Some(packages) = packages else {
+            return self;
+        };
         self.0.push("apk add --no-cache ruby".into());
         if !packages.is_empty() {
             let cmd = format!("gem install {}", packages.join(" "));
             self.0.push(cmd);
         }
+        self
     }
 
-    pub fn with_npm(&mut self, packages: &[String]) {
+    pub fn with_npm(&mut self, packages: Option<&[String]>) -> &mut Self {
+        let Some(packages) = packages else {
+            return self;
+        };
         self.0.push("apk add --no-cache nodejs npm".into());
         if !packages.is_empty() {
             let cmd = format!("npm install -g {}", packages.join(" "));
             self.0.push(cmd);
         }
+        self
     }
 
-    pub fn with_pip(&mut self, packages: &[String]) {
+    pub fn with_pip(&mut self, packages: Option<&[String]>) -> &mut Self {
+        let Some(packages) = packages else {
+            return self;
+        };
         self.0.push("apk add --no-cache python3 py3-pip".into());
         if !packages.is_empty() {
             let cmd = format!("pip install {}", packages.join(" "));
             self.0.push(cmd);
         }
+        self
     }
 
-    pub fn with_flatpak(&mut self, packages: &[String]) {
+    pub fn with_flatpak(&mut self, packages: Option<&[String]>) -> &mut Self {
+        let Some(packages) = packages else {
+            return self;
+        };
         self.0.push("apk add --no-cache flatpak".into());
         self.0.push("flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo".into());
         for package in packages {
             let cmd = format!("flatpak install -y flathub {}", package);
             self.0.push(cmd);
         }
+        self
     }
 
-    pub fn build(self) -> InstallCommand {
+    pub fn build(&mut self) -> InstallCommand {
         InstallCommand(self.0.join(" && "))
     }
 }
@@ -129,7 +197,7 @@ impl InstallCommandBuilder {
 ///
 /// A common interface for container adapters.
 pub trait Container {
-    fn init() -> Result<(), ContainerError>;
-    fn shell(req: &ContainerRunRequest) -> Result<(), ContainerError>;
-    fn run(req: &ContainerRunRequest, command: &str) -> Result<(), ContainerError>;
+    fn init(&self) -> Result<(), ContainerError>;
+    fn shell(&self, req: &ContainerRunRequest) -> Result<(), ContainerError>;
+    fn run(&self, req: &ContainerRunRequest, command: &str) -> Result<(), ContainerError>;
 }

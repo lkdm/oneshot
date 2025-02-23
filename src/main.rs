@@ -1,7 +1,8 @@
-use std::path::PathBuf;
-
 use clap::{Parser, Subcommand, ValueEnum};
-use oneshot::container::Capabilities;
+use oneshot::container::{
+    Capabilities, Container, ContainerRunRequest, InstallCommandBuilder, podman::Podman,
+};
+use std::{env, path::PathBuf};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -68,10 +69,40 @@ enum Commands {
     #[command(about = "Execute a given script within the oneshot container")]
     Exec {
         #[arg(short, long)]
-        path: std::path::PathBuf,
+        path: Option<std::path::PathBuf>,
     },
 }
 
 fn main() {
     let cli = Cli::parse();
+    let install_commands = InstallCommandBuilder::new()
+        .with_apk(cli.from_apk.as_deref())
+        .with_git(cli.from_git.as_deref())
+        .with_cargo(cli.from_cargo.as_deref())
+        .with_uv(cli.from_uv.as_deref())
+        .build();
+
+    let req = ContainerRunRequest::new(cli.image, cli.output_dir, cli.cap_add, &install_commands);
+
+    let container: Podman = Podman::new();
+
+    // Now you can use container_run_request to run your container
+    match &cli.command {
+        Some(Commands::Run { script }) => {
+            // Run the script in the container
+            container.init();
+            container.run(&req, script);
+        }
+        Some(Commands::Shell) => {
+            // Start an interactive shell in the container
+            container.init();
+            container.shell(&req);
+        }
+        Some(Commands::Exec { path }) => {
+            // Execute the script at the given path in the container
+        }
+        None => {
+            // Handle case when no subcommand is provided
+        }
+    }
 }
