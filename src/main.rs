@@ -147,6 +147,7 @@ fn main() {
         }
         Commands::Exec { path, common: _ } => {
             // Execute the script at the given path in the container
+            unimplemented!("Exec not implemented yet");
         }
     }
 }
