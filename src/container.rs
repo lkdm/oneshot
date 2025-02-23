@@ -5,6 +5,40 @@ use std::{env, fmt};
 use clap::ValueEnum;
 use thiserror::Error;
 
+#[derive(Debug, Clone)]
+struct ContainerImage {
+    name: String,
+    url: String,
+    tags: Vec<String>,
+}
+impl ContainerImage {
+    pub fn new(name: &str, url: &str, tags: &str) -> Self {
+        Self {
+            name: name.into(),
+            tags: tags.split(',').map(|s| s.trim().to_string()).collect(),
+            url: url.into(),
+        }
+    }
+}
+
+struct ContainerImages(Vec<ContainerImage>);
+impl Default for ContainerImages {
+    fn default() -> Self {
+        Self(
+            [
+                ContainerImage::new("rust", "docker.io/library/rust:alpine", "rust,cargo,rustup"),
+                ContainerImage::new(
+                    "bun",
+                    "docker.io/oven/bun:alpine",
+                    "bun,js,ts,bunsh,typescript",
+                ),
+                ContainerImage::new("uv", "ghcr.io/astral-sh/uv:alpine", "uv,python,python3,pip"),
+            ]
+            .to_vec(),
+        )
+    }
+}
+
 #[derive(Debug, Error)]
 pub enum ContainerError {
     #[error("could not init container")]

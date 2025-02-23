@@ -1,0 +1,4 @@
+[containers]
+rust = "docker.io/library/rust:alpine"
+bun = "docker.io/oven/bun:alpine"
+uv = "ghcr.io/astral-sh/uv:alpine"
