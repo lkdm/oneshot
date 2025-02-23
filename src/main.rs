@@ -121,10 +121,29 @@ fn main() {
             container.init();
             container.run(&req, script);
         }
-        Commands::Shell { common: _ } => {
+        Commands::Shell { common } => {
             // Start an interactive shell in the container
+            let install_commands = InstallCommandBuilder::new()
+                .with_apk(common.from_apk.as_deref())
+                .with_git(common.from_git.as_deref())
+                .with_cargo(common.from_cargo.as_deref())
+                .with_uv(common.from_uv.as_deref())
+                .build();
+
+            let output_dir = common
+                .output_dir
+                .clone()
+                .unwrap_or_else(|| env::current_dir().expect("Failed to get current directory"));
+
+            let req = ContainerRunRequest::new(
+                &common.image,
+                output_dir,
+                common.cap_add.clone().unwrap_or_default(),
+                &install_commands,
+            );
+
             container.init();
-            // container.shell(&req);
+            container.shell(&req);
         }
         Commands::Exec { path, common: _ } => {
             // Execute the script at the given path in the container
