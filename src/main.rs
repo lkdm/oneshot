@@ -49,7 +49,12 @@ struct CommonArgs {
 }
 
 #[derive(Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version, about, long_about = None,
+	after_help=r#"REPLS:
+  Python       oneshot run -s "python3 -i" --from-uv numpy
+  Typescript   oneshot run -s "bun repl" --from-bun
+"#
+	)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
