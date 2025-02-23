@@ -1,7 +1,7 @@
 use crate::container::Capabilities;
 
 use super::{Container, ContainerError, ContainerRunRequest};
-use std::process::Command;
+use std::{io, process::Command};
 pub struct Podman;
 
 impl Podman {
@@ -48,7 +48,7 @@ impl Container for Podman {
             .arg(&req.image)
             .arg("/bin/sh")
             .arg("-c")
-            .arg(format!("{}exec /bin/sh", req.install_commands));
+            .arg(format!("{} exec /bin/sh", req.install_commands));
 
         command
             .status()
@@ -82,7 +82,7 @@ impl Container for Podman {
             .arg(&req.image)
             .arg("/bin/sh")
             .arg("-c")
-            .arg(format!("{}eval {}", req.install_commands, command));
+            .arg(format!("{}; eval {}", req.install_commands, command));
 
         podman_command
             .status()

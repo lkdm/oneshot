@@ -37,17 +37,15 @@ pub struct ContainerRunRequest {
 
 impl ContainerRunRequest {
     pub fn new(
-        image: String,
-        output_dir: Option<PathBuf>,
-        capabilities: Option<Vec<Capabilities>>,
+        image: &str,
+        output_dir: PathBuf,
+        capabilities: Vec<Capabilities>,
         install_commands: &InstallCommand,
     ) -> Self {
-        let output_dir = &output_dir
-            .unwrap_or_else(|| env::current_dir().expect("Failed to get current directory"));
         Self {
             image: image.to_string(),
             output_dir: output_dir.into(),
-            capabilities: capabilities.unwrap_or_default(),
+            capabilities: capabilities,
             install_commands: install_commands.clone(),
         }
     }
@@ -108,6 +106,8 @@ impl InstallCommandBuilder {
             let cmd = format!("uv pip install {}", packages.join(" "));
             self.0.push(cmd);
         }
+        self.0
+            .extend(["deactivate".into(), ". /app/venv/bin/activate".into()]);
         self
     }
 

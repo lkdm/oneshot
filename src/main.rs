@@ -1,15 +1,11 @@
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use oneshot::container::{
     Capabilities, Container, ContainerRunRequest, InstallCommandBuilder, podman::Podman,
 };
 use std::{env, path::PathBuf};
 
-#[derive(Parser)]
-#[command(author, version, about, long_about = None)]
-struct Cli {
-    #[command(subcommand)]
-    command: Option<Commands>,
-
+#[derive(Args, Clone, Debug)]
+struct CommonArgs {
     #[arg(short, long, help = "Container image", default_value = &"alpine:latest")]
     image: String,
 
@@ -52,6 +48,16 @@ struct Cli {
     from_uv: Option<Vec<String>>,
 }
 
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+
+    #[clap(flatten)]
+    common: CommonArgs,
+}
+
 #[derive(Subcommand)]
 enum Commands {
     #[command(about = "Run a shell command within the oneshot container")]
@@ -63,46 +69,60 @@ enum Commands {
             long_help = "The string will be evaluated as a Bash script within the container."
         )]
         script: String,
+        #[clap(flatten)]
+        common: CommonArgs,
     },
     #[command(about = "Run an interactive shell within the oneshot container")]
-    Shell,
+    Shell {
+        #[clap(flatten)]
+        common: CommonArgs,
+    },
     #[command(about = "Execute a given script within the oneshot container")]
     Exec {
         #[arg(short, long)]
         path: Option<std::path::PathBuf>,
+
+        #[clap(flatten)]
+        common: CommonArgs,
     },
 }
 
 fn main() {
     let cli = Cli::parse();
-    let install_commands = InstallCommandBuilder::new()
-        .with_apk(cli.from_apk.as_deref())
-        .with_git(cli.from_git.as_deref())
-        .with_cargo(cli.from_cargo.as_deref())
-        .with_uv(cli.from_uv.as_deref())
-        .build();
-
-    let req = ContainerRunRequest::new(cli.image, cli.output_dir, cli.cap_add, &install_commands);
-
     let container: Podman = Podman::new();
 
     // Now you can use container_run_request to run your container
     match &cli.command {
-        Some(Commands::Run { script }) => {
-            // Run the script in the container
+        Commands::Run { script, common } => {
+            let install_commands = InstallCommandBuilder::new()
+                .with_apk(common.from_apk.as_deref())
+                .with_git(common.from_git.as_deref())
+                .with_cargo(common.from_cargo.as_deref())
+                .with_uv(common.from_uv.as_deref())
+                .build();
+
+            let output_dir = common
+                .output_dir
+                .clone()
+                .unwrap_or_else(|| env::current_dir().expect("Failed to get current directory"));
+
+            let req = ContainerRunRequest::new(
+                &common.image,
+                output_dir,
+                common.cap_add.clone().unwrap_or_default(),
+                &install_commands,
+            );
+
             container.init();
             container.run(&req, script);
         }
-        Some(Commands::Shell) => {
+        Commands::Shell { common: _ } => {
             // Start an interactive shell in the container
             container.init();
-            container.shell(&req);
+            // container.shell(&req);
         }
-        Some(Commands::Exec { path }) => {
+        Commands::Exec { path, common: _ } => {
             // Execute the script at the given path in the container
-        }
-        None => {
-            // Handle case when no subcommand is provided
         }
     }
 }
