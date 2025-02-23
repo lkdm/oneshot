@@ -1,0 +1,2 @@
+#!/bin/bash
+oneshot run -s "python3 -i" --from-uv numpy

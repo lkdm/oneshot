@@ -1,0 +1,13 @@
+[package]
+name = "oneshot"
+authors = ["Luke M <44519853+lkdm@users.noreply.github.com>"]
+description = "Oneshot makes executing one-off containerised scripts simple"
+version = "0.1.0"
+edition = "2024"
+repository = "https://github.com/lkdm/oneshot.git"
+keywords = ["cli", "containers", "podman", "docker"]
+categories = ["command-line-utilities"]
+
+[dependencies]
+clap = { version = "4.5.30", features = ["derive"] }
+thiserror = "2"
