@@ -1,3 +1,7 @@
+//! Podman adapter
+//!
+//! This is a podman adapter for oneshot-- it contains code that is specific to running the oneshot
+//! command using Podman.
 use crate::container::Capabilities;
 
 use super::{Container, ContainerError, ContainerRunRequest};

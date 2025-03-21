@@ -1,6 +1,6 @@
 # Oneshot
 
-Oneshot executes arbitrary scripts or starts a shell in a minimal temporary Podman container.
+Oneshot executes arbitrary scripts or starts a shell in a minimal temporary Podman container. It is designed to be an ergonomic interface for creating one-off scripts inside of short-lived temporary containers. 
 
 ## Usage
 
@@ -20,21 +20,25 @@ This script installs `yt-dlp` using `uv` and runs it.
 oneshot run -s "yt-dlp dQw4w9WgXcQ" --from-uv yt-dlp
 ```
 
-### Exec command
+## Development
 
-You can execute `oneshot` scripts using the exec command.
-
-## 1shot scripts
-
-A planned feature is being able to execute a `.1sh` script using a shebang.
+You can develop within a devcontainer that includes Rust, Homebrew, NeoVim,
+Docker-outside-of-docker, and Podman features.
 
 ```sh
-#!/bin/oneshot
-#!oneshot --image alpine:latest --from-uv
-#!/usr/bin/env python3
+devpod up .
+devpod ssh .
+```
 
-import requests
+Then just use cargo to interact with the application. Arguments after the `--`
+are read by the app.
 
-response = requests.get('https://api.example.com')
-print(response.json())
+```sh
+cargo run -- --help
+```
+
+Example
+
+```sh
+cargo run -- run -s "yt-dlp dQw4w9WgXcQ" --from-uv yt-dlp
 ```

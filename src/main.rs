@@ -82,15 +82,7 @@ enum Commands {
         #[clap(flatten)]
         common: CommonArgs,
     },
-    #[command(about = "Execute a given script within the oneshot container")]
-    Exec {
-        #[arg(short, long)]
-        path: Option<std::path::PathBuf>,
-
-        #[clap(flatten)]
-        common: CommonArgs,
-    },
-}
+ }
 
 fn main() {
     let cli = Cli::parse();
@@ -144,10 +136,6 @@ fn main() {
 
             container.init();
             container.shell(&req);
-        }
-        Commands::Exec { path, common: _ } => {
-            // Execute the script at the given path in the container
-            unimplemented!("Exec not implemented yet");
         }
     }
 }

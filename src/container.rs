@@ -68,6 +68,7 @@ impl InstallCommandBuilder {
         Self(Vec::new())
     }
 
+    /// Alpine package manager
     pub fn with_apk(&mut self, packages: Option<&[String]>) -> &mut Self {
         let Some(packages) = packages else {
             return self;
@@ -80,6 +81,7 @@ impl InstallCommandBuilder {
         self
     }
 
+    /// Rust package manager
     pub fn with_cargo(&mut self, packages: Option<&[String]>) -> &mut Self {
         let Some(packages) = packages else {
             return self;
@@ -92,6 +94,7 @@ impl InstallCommandBuilder {
         self
     }
 
+    /// Python package manager
     pub fn with_uv(&mut self, packages: Option<&[String]>) -> &mut Self {
         let Some(packages) = packages else {
             return self;
@@ -111,6 +114,7 @@ impl InstallCommandBuilder {
         self
     }
 
+    /// JavaScript package manager
     pub fn with_bun(&mut self, packages: Option<&[String]>) -> &mut Self {
         let Some(packages) = packages else {
             return self;
@@ -127,6 +131,8 @@ impl InstallCommandBuilder {
         self
     }
 
+
+    /// Git packages
     pub fn with_git(&mut self, repos: Option<&[String]>) -> &mut Self {
         let Some(repos) = repos else {
             return self;
@@ -139,6 +145,7 @@ impl InstallCommandBuilder {
         self
     }
 
+    /// Ruby packages
     pub fn with_rubygems(&mut self, packages: Option<&[String]>) -> &mut Self {
         let Some(packages) = packages else {
             return self;
@@ -151,6 +158,7 @@ impl InstallCommandBuilder {
         self
     }
 
+    /// JavaScript package manager
     pub fn with_npm(&mut self, packages: Option<&[String]>) -> &mut Self {
         let Some(packages) = packages else {
             return self;
@@ -163,6 +171,8 @@ impl InstallCommandBuilder {
         self
     }
 
+
+    /// Python package manager
     pub fn with_pip(&mut self, packages: Option<&[String]>) -> &mut Self {
         let Some(packages) = packages else {
             return self;
@@ -175,6 +185,7 @@ impl InstallCommandBuilder {
         self
     }
 
+    /// Flatpak packages
     pub fn with_flatpak(&mut self, packages: Option<&[String]>) -> &mut Self {
         let Some(packages) = packages else {
             return self;
