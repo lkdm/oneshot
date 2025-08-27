@@ -2,10 +2,9 @@
 //!
 //! This is a podman adapter for oneshot-- it contains code that is specific to running the oneshot
 //! command using Podman.
-use crate::container::Capabilities;
-
 use super::{Container, ContainerError, ContainerRunRequest};
-use std::{io, process::Command};
+use std::process::Command;
+
 pub struct Podman;
 
 impl Podman {
@@ -52,7 +51,7 @@ impl Container for Podman {
             .arg(&req.image)
             .arg("/bin/sh")
             .arg("-c")
-            .arg(format!("{} exec /bin/sh", req.install_commands));
+            .arg(format!("{} exec /bin/sh", req.commands.to_string()));
 
         command
             .status()
@@ -62,7 +61,7 @@ impl Container for Podman {
         Ok(())
     }
 
-    fn run(&self, req: &ContainerRunRequest, command: &str) -> Result<(), ContainerError> {
+    fn run(&self, req: &ContainerRunRequest) -> Result<(), ContainerError> {
         let mut podman_command = Command::new("podman");
         podman_command
             .arg("run")
@@ -86,7 +85,7 @@ impl Container for Podman {
             .arg(&req.image)
             .arg("/bin/sh")
             .arg("-c")
-            .arg(format!("{}; eval {}", req.install_commands, command));
+            .arg(format!("{}", req.commands.to_string()));
 
         podman_command
             .status()

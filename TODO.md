@@ -1,32 +1,82 @@
 ## Redesign
 
-Going to redesign `oneshot` with a focus on caching instead.
+The aim of the redesign is to improve the flexibility and expressiveness of `oneshot`.
 
-Oneshot will;
-1. Generate a dockerfile, based on what the user passes in
-2. Run that dockefile with the script
+### Configuration
 
-Store dockerfiles in;
-~/.oneshot/dockerfiles/<hash>/
+Default or per-tool settings:
 
-Maybe: periodically prune unused containerfiles
+- [ ] **default_envs**: Global environment variables to be injected in every
+      container run
+- [ ] **default_mounts**: Global mounts applied for all tools unless
+      overridden (default is cwd and temp).
+- [ ] **working_dir**: Directory inside a container where commands are run
+      (default: `/workspace`)
+- [ ] **shell**: Default shell (bash, sh) for running multi-command steps
+- [ ] **dotfiles**: Dotfiles to use
+- [ ] **timeout**: Max duration a step or pipeline can run before aborting
 
-## TODO
+Cli behaviour
 
-- [ ] Create Dockerfile generation script
-- [ ] Create part that runs Dockerfile
-- [ ] Config file to choose Docker or Podman
+- [ ] verbose
+- [ ] dry_run
+- [ ] profile: Switch config profiles or overrides
 
-## Ideas
+### Tool config
 
-- `--keep-alive`: Do not close container on exit
-- `toml` Allows a oneshot to be configured with a toml file
-- Piping oneshots into each other `oneshot -s "generate data" | oneshot -s "process data"`
-- Use Oneshot as a shim package manager
-- Change focus of Oneshot to just package manager for containerised scripts
+The configuration file contains the registry of tools
 
-## Future direction
+```sh
+[tool.brew]
+container = "ghcr.io/homebrew/brew"
+envs = ["RUST_LOG=debug", "OTHER_ENV=val"]
+mounts = ["cwd:rw", "ssh-agent:ro"]
+install = "brew install {packages}"
+run = "{command}"
+```
 
-- Oneshot focused on managing packages/libraries (adding binaries/script to PATH
-or exposing commands with `oneshot run`).
-- 
+So the user can run things really easily:
+
+```sh
+oneshot --tool brew --install ffmpeg --run "ffmpeg input.m4a output.m4a"
+```
+
+- [ ] Container image/tag version pinning
+
+### Pipeline config
+
+Later, pipelines can be added to pass the output of one container into another.
+
+```toml
+[pipeline]
+name = "media_processing"
+
+[[pipeline.steps]]
+id = "install_deps"
+tool = "brew"
+install = "ffmpeg"
+
+[[pipeline.steps]]
+id = "convert_audio"
+tool = "brew"
+run = "ffmpeg input.m4a output.m4a"
+depends_on = ["install_deps"]
+
+[[pipeline.steps]]
+id = "analyze_audio"
+tool = "python"
+run = "python analyze_audio.py output.m4a"
+depends_on = ["convert_audio"]
+```
+
+```sh
+oneshot pipeline run --name media_processing
+```
+
+Config
+
+- [ ] Retries
+- [ ] On failure
+- [ ] Parallel steps
+- [ ] Logging
+- [ ] Hooks
