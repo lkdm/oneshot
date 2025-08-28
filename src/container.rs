@@ -1,16 +1,15 @@
 pub mod podman;
 use std::fmt;
 use std::path::PathBuf;
-use std::process::Command;
 
 use clap::ValueEnum;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ContainerError {
-    #[error("could not init container")]
+    #[error("could not init container: {0}")]
     Init(String),
-    #[error("error while executing")]
+    #[error("error while executing: {0}")]
     Execution(String),
 }
 
@@ -46,7 +45,7 @@ impl std::fmt::Display for Commands {
 }
 
 pub struct ContainerRunRequest {
-    image: String,
+    container_file: PathBuf,
     output_dir: PathBuf,
     capabilities: Vec<Capabilities>,
     commands: Commands,
@@ -54,13 +53,13 @@ pub struct ContainerRunRequest {
 
 impl ContainerRunRequest {
     pub fn new(
-        image: &str,
+        container_file: PathBuf,
         output_dir: PathBuf,
         capabilities: Vec<Capabilities>,
         commands: Commands,
     ) -> Self {
         Self {
-            image: image.to_string(),
+            container_file,
             output_dir: output_dir.into(),
             capabilities,
             commands,
@@ -72,6 +71,7 @@ impl ContainerRunRequest {
 ///
 /// A common interface for container adapters.
 pub trait Container {
+    fn build_image(&self, container_file: &PathBuf) -> Result<String, ContainerError>;
     fn init(&self) -> Result<(), ContainerError>;
     fn shell(&self, req: &ContainerRunRequest) -> Result<(), ContainerError>;
     fn run(&self, req: &ContainerRunRequest) -> Result<(), ContainerError>;

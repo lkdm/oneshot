@@ -2,8 +2,14 @@
 //!
 //! This is a podman adapter for oneshot-- it contains code that is specific to running the oneshot
 //! command using Podman.
+use uuid::Uuid;
+
 use super::{Container, ContainerError, ContainerRunRequest};
-use std::process::Command;
+use std::{
+    io::{BufRead, BufReader},
+    path::PathBuf,
+    process::{Command, Stdio},
+};
 
 pub struct Podman;
 
@@ -30,7 +36,68 @@ impl Container for Podman {
         Ok(())
     }
 
+    fn build_image(&self, container_file: &PathBuf) -> Result<String, ContainerError> {
+        // Generate a unique image tag (you can tweak this)
+        let image_tag = format!("oneshot-temp:{}", Uuid::new_v4());
+
+        // The directory containing the Containerfile is the build context
+        let build_context = container_file
+            .parent()
+            .ok_or_else(|| ContainerError::Init("Invalid Containerfile path".to_string()))?;
+
+        // Prepare podman build command:
+        // podman build -f <container_file> -t <image_tag> <build_context>
+        let mut cmd = Command::new("podman");
+        cmd.arg("build")
+            .arg("-f")
+            .arg(container_file)
+            .arg("-t")
+            .arg(&image_tag)
+            .arg(build_context)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+
+        let mut child = cmd
+            .spawn()
+            .map_err(|e| ContainerError::Init(format!("Failed to spawn podman build: {}", e)))?;
+
+        // Optionally, read and print output for debugging
+        {
+            let stdout = child.stdout.take().unwrap();
+            let stderr = child.stderr.take().unwrap();
+
+            let stdout_reader = BufReader::new(stdout);
+            for line in stdout_reader.lines() {
+                if let Ok(line) = line {
+                    println!("[podman build stdout] {}", line);
+                }
+            }
+
+            let stderr_reader = BufReader::new(stderr);
+            for line in stderr_reader.lines() {
+                if let Ok(line) = line {
+                    eprintln!("[podman build stderr] {}", line);
+                }
+            }
+        }
+
+        let status = child
+            .wait()
+            .map_err(|e| ContainerError::Init(format!("Failed to wait on podman build: {}", e)))?;
+
+        if !status.success() {
+            return Err(ContainerError::Init(format!(
+                "Podman build failed with status: {}",
+                status
+            )));
+        }
+
+        Ok(image_tag)
+    }
+
     fn shell(&self, req: &ContainerRunRequest) -> Result<(), ContainerError> {
+        let image_tag = self.build_image(&req.container_file)?;
+
         let mut command = Command::new("podman");
         command
             .arg("run")
@@ -48,7 +115,7 @@ impl Container for Podman {
         command
             .arg("-e")
             .arg(r#"PS1=\[\033[1;32m\]podshot \[\033[0m\]:\[\033[1;34m\]\w\[\033[0m\]^ "#)
-            .arg(&req.image)
+            .arg(&image_tag)
             .arg("/bin/sh")
             .arg("-c")
             .arg(format!("{} exec /bin/sh", req.commands.to_string()));
@@ -62,6 +129,9 @@ impl Container for Podman {
     }
 
     fn run(&self, req: &ContainerRunRequest) -> Result<(), ContainerError> {
+        // Build the image from the Containerfile path first
+        let image_tag = self.build_image(&req.container_file)?;
+
         let mut podman_command = Command::new("podman");
         podman_command
             .arg("run")
@@ -82,7 +152,7 @@ impl Container for Podman {
         }
 
         podman_command
-            .arg(&req.image)
+            .arg(&image_tag)
             .arg("/bin/sh")
             .arg("-c")
             .arg(format!("{}", req.commands.to_string()));

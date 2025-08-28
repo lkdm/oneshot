@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
@@ -17,10 +19,9 @@ pub enum Commands {
 pub struct RunArgs {
     /// Path to tool directory (contains Containerfile)
     #[arg()]
-    pub tool: String,
+    pub tool: PathBuf,
 
     /// Commands to run in the container, separated by `--`
     #[arg(trailing_var_arg = true)]
     pub commands: Vec<String>,
 }
-

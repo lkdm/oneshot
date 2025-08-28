@@ -11,7 +11,7 @@ fn main() {
 
     match cli.command {
         Commands::Run(run_args) => {
-            println!("Tool path: {}", run_args.tool);
+            println!("Tool path: {:?}", run_args.tool);
 
             // Convert Vec<String> into Commands newtype
             let commands = oneshot::container::Commands(run_args.commands);
@@ -22,7 +22,7 @@ fn main() {
             let output_dir = env::current_dir().expect("Failed to get cwd");
 
             let req = ContainerRunRequest::new(
-                &run_args.tool, // assuming this is the container image or tool name
+                run_args.tool, // assuming this is the container image or tool name
                 output_dir,
                 vec![], // capabilities (empty for now)
                 commands,
